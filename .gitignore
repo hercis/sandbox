@@ -1,0 +1,20 @@
+# Gradle ignore
+.gradle/
+build/
+!**/src/**/build/
+gradle-app.setting
+.gradletasknamecache
+
+# Eclipse ignore
+.project
+.classpath
+.settings/
+bin/
+*.tmp
+*.bak
+
+# OS-specific ignore
+.DS_Store
+Thumbs.db
+
+*.swp
