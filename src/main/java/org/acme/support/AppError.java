@@ -18,9 +18,10 @@ public sealed interface AppError
 
   String message();
 
+  ErrorInfo errorInfo();
+
   @JsonInclude(Include.NON_NULL)
   public record ErrorResponse(String message, List<ErrorInfo> errors, OffsetDateTime timestamp) {
-
     public ErrorResponse {
       Objects.requireNonNull(message, "message cannot be null");
     }
@@ -29,12 +30,12 @@ public sealed interface AppError
       return ErrorResponse.of(message, null);
     }
 
-    public static ErrorResponse fromSingleError(ErrorInfo errorInfo) {
-      return ErrorResponse.of(errorInfo.message(), List.of(errorInfo));
+    public static ErrorResponse fromError(AppError error) {
+      return ErrorResponse.of(error.message(), List.of(error.errorInfo()));
     }
 
-    public static ErrorResponse fromErrors(String message, List<ErrorInfo> errors) {
-      return ErrorResponse.of(message, errors);
+    public static ErrorResponse fromErrors(String message, List<? extends AppError> errors) {
+      return ErrorResponse.of(message, errors.stream().map(AppError::errorInfo).toList());
     }
 
     public static ErrorResponse of(String message, List<ErrorInfo> errors) {
@@ -44,7 +45,6 @@ public sealed interface AppError
 
   @JsonInclude(Include.NON_NULL)
   public record ErrorInfo(String field, String message, String code) {
-
     public static ErrorInfo of(String field, String message) {
       return ErrorInfo.of(field, message, null);
     }
@@ -132,17 +132,20 @@ public sealed interface AppError
       return errorInfo.message();
     }
 
-    public static ValidationError fromMessage(String code, String messagePattern, Object... args) {
-      return ofTemplate(code, messagePattern).build(args);
+    public static ValidationError from(String field, String messagePattern, Object... args) {
+      return ofTemplate(null, field, messagePattern).build(args);
     }
 
-    public static ValidationError fromMessage(
-        String code, String field, String messagePattern, Object... args) {
-      return ofTemplate(code, field, messagePattern).build(args);
+    public static ValidationError fromCode(String code, String messagePattern, Object... args) {
+      return ofTemplate(code, null, messagePattern).build(args);
+    }
+
+    public static ValidationError fromMessage(String messagePattern, Object... args) {
+      return ofTemplate(null, null, messagePattern).build(args);
     }
 
     public static ValidationError.Builder ofTemplate(String code, String messagePattern) {
-      return new ValidationError.Builder(messagePattern).code(code);
+      return ValidationError.ofTemplate(code, null, messagePattern);
     }
 
     public static ValidationError.Builder ofTemplate(
