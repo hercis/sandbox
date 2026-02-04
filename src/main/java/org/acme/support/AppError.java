@@ -1,9 +1,14 @@
-package org.acme.order.support;
+package org.acme.support;
 
 import java.text.MessageFormat;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
 
 public sealed interface AppError
     permits AppError.InternalAppError,
@@ -13,7 +18,41 @@ public sealed interface AppError
 
   String message();
 
-  public record ErrorInfo(String field, String message, String code) {}
+  @JsonInclude(Include.NON_NULL)
+  public record ErrorResponse(String message, List<ErrorInfo> errors, OffsetDateTime timestamp) {
+
+    public ErrorResponse {
+      Objects.requireNonNull(message, "message cannot be null");
+    }
+
+    public static ErrorResponse fromMessage(String message) {
+      return ErrorResponse.of(message, null);
+    }
+
+    public static ErrorResponse fromSingleError(ErrorInfo errorInfo) {
+      return ErrorResponse.of(errorInfo.message(), List.of(errorInfo));
+    }
+
+    public static ErrorResponse fromErrors(String message, List<ErrorInfo> errors) {
+      return ErrorResponse.of(message, errors);
+    }
+
+    public static ErrorResponse of(String message, List<ErrorInfo> errors) {
+      return new ErrorResponse(message, errors, OffsetDateTime.now(ZoneOffset.UTC));
+    }
+  }
+
+  @JsonInclude(Include.NON_NULL)
+  public record ErrorInfo(String field, String message, String code) {
+
+    public static ErrorInfo of(String field, String message) {
+      return ErrorInfo.of(field, message, null);
+    }
+
+    public static ErrorInfo of(String field, String message, String code) {
+      return new ErrorInfo(field, message, code);
+    }
+  }
 
   public record InternalAppError(ErrorInfo errorInfo, Throwable cause) implements AppError {
     private static final String INTERNAL_PATTERN = "Internal server error: %s";
@@ -139,7 +178,7 @@ public sealed interface AppError
   }
 
   public record NotFoundError(ErrorInfo errorInfo) implements AppError {
-    private static final String NFE_PATTERN = "{0} with ID '{1}' was not found";
+    private static final String NFE_PATTERN = "{0} with ID ''{1}'' was not found";
 
     @Override
     public String message() {
@@ -151,7 +190,7 @@ public sealed interface AppError
     }
 
     public static NotFoundError.Builder ofTemplate(String code, String entity) {
-      return new NotFoundError.Builder();
+      return new NotFoundError.Builder().code(code).entity(entity);
     }
 
     public static class Builder {
@@ -169,7 +208,8 @@ public sealed interface AppError
       }
 
       public NotFoundError build(Object id) {
-        String message = MessageFormat.format(NFE_PATTERN, entity, id == null ? "<null>" : id);
+        String message =
+            MessageFormat.format(NFE_PATTERN, entity, id == null ? "<null>" : id.toString());
         ErrorInfo errorInfo = new ErrorInfo(null, message, code);
         return new NotFoundError(errorInfo);
       }

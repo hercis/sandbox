@@ -1,4 +1,4 @@
-package org.acme.order.support;
+package org.acme.support;
 
 @FunctionalInterface
 public interface CheckedSupplier<T> {

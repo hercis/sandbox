@@ -1,4 +1,4 @@
-package org.acme.order.support;
+package org.acme.support;
 
 import java.util.Objects;
 import java.util.function.Consumer;
@@ -23,7 +23,7 @@ public sealed interface Result<V, E> permits Result.Success, Result.Failure {
 
   Result<V, E> peekFailure(Consumer<? super E> c);
 
-  Result<V, E> recover(Function<E, Result<V, E>> recovery);
+  Result<V, E> recover(Function<? super E, Result<V, E>> recovery);
 
   Result<V, E> recoverWith(Function<E, V> recovery);
 
@@ -113,7 +113,7 @@ public sealed interface Result<V, E> permits Result.Success, Result.Failure {
     }
 
     @Override
-    public Result<V, E> recover(Function<E, Result<V, E>> f) {
+    public Result<V, E> recover(Function<? super E, Result<V, E>> f) {
       return this;
     }
 
@@ -173,7 +173,7 @@ public sealed interface Result<V, E> permits Result.Success, Result.Failure {
     }
 
     @Override
-    public Result<V, E> recover(Function<E, Result<V, E>> f) {
+    public Result<V, E> recover(Function<? super E, Result<V, E>> f) {
       Objects.requireNonNull(f, "recovery function must not be null");
       return f.apply(error);
     }
