@@ -18,7 +18,7 @@ public sealed interface AppError
 
   String message();
 
-  ErrorInfo errorInfo();
+  ErrorInfo details();
 
   @JsonInclude(Include.NON_NULL)
   public record ErrorResponse(String message, List<ErrorInfo> errors, OffsetDateTime timestamp) {
@@ -31,11 +31,15 @@ public sealed interface AppError
     }
 
     public static ErrorResponse fromError(AppError error) {
-      return ErrorResponse.of(error.message(), List.of(error.errorInfo()));
+      return ErrorResponse.of(error.message(), List.of(error.details()));
+    }
+
+    public static ErrorResponse fromError(String message, AppError error) {
+      return ErrorResponse.of(message, List.of(error.details()));
     }
 
     public static ErrorResponse fromErrors(String message, List<? extends AppError> errors) {
-      return ErrorResponse.of(message, errors.stream().map(AppError::errorInfo).toList());
+      return ErrorResponse.of(message, errors.stream().map(AppError::details).toList());
     }
 
     public static ErrorResponse of(String message, List<ErrorInfo> errors) {
@@ -44,7 +48,7 @@ public sealed interface AppError
   }
 
   @JsonInclude(Include.NON_NULL)
-  public record ErrorInfo(String field, String message, String code) {
+  record ErrorInfo(String field, String message, String code) {
     public static ErrorInfo of(String field, String message) {
       return ErrorInfo.of(field, message, null);
     }
@@ -54,18 +58,18 @@ public sealed interface AppError
     }
   }
 
-  public record InternalAppError(ErrorInfo errorInfo, Throwable cause) implements AppError {
+  public record InternalAppError(ErrorInfo details, Throwable cause) implements AppError {
     private static final String INTERNAL_PATTERN = "Internal server error: %s";
     private static final String NO_DETAILS_FOUND = "<no details found>";
     private static final String INTERNAL_CODE = "001";
 
     public InternalAppError {
-      Objects.requireNonNull(errorInfo, "errorInfo cannot be null");
+      Objects.requireNonNull(details, "details cannot be null");
     }
 
     @Override
     public String message() {
-      return errorInfo.message();
+      return details().message();
     }
 
     public static InternalAppError fromCause(Throwable cause) {
@@ -95,18 +99,18 @@ public sealed interface AppError
     }
   }
 
-  public record ExternalSystemError(ErrorInfo errorInfo, Throwable cause) implements AppError {
+  public record ExternalSystemError(ErrorInfo details, Throwable cause) implements AppError {
     private static final String EXTERNAL_PATTERN = "External service error: %s";
     private static final String NO_DETAILS_FOUND = "<no details found>";
     private static final String EXTERNAL_CODE = "001";
 
     public ExternalSystemError {
-      Objects.requireNonNull(errorInfo, "errorInfo cannot be null");
+      Objects.requireNonNull(details, "details cannot be null");
     }
 
     @Override
     public String message() {
-      return errorInfo.message();
+      return details().message();
     }
 
     public static ExternalSystemError fromCause(Throwable cause) {
@@ -126,10 +130,14 @@ public sealed interface AppError
     }
   }
 
-  public record ValidationError(ErrorInfo errorInfo) implements AppError {
+  public record ValidationError(ErrorInfo details) implements AppError {
+    public ValidationError {
+      Objects.requireNonNull(details, "details cannot be null");
+    }
+
     @Override
     public String message() {
-      return errorInfo.message();
+      return details().message();
     }
 
     public static ValidationError from(String field, String messagePattern, Object... args) {
@@ -180,12 +188,16 @@ public sealed interface AppError
     }
   }
 
-  public record NotFoundError(ErrorInfo errorInfo) implements AppError {
+  public record NotFoundError(ErrorInfo details) implements AppError {
+    public NotFoundError {
+      Objects.requireNonNull(details, "details cannot be null");
+    }
+
     private static final String NFE_PATTERN = "{0} with ID ''{1}'' was not found";
 
     @Override
     public String message() {
-      return errorInfo.message();
+      return details().message();
     }
 
     public static NotFoundError fromId(String code, String entity, Object id) {
