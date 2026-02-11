@@ -1,9 +1,6 @@
 package org.acme.support;
 
 import java.text.MessageFormat;
-import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
-import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -19,33 +16,6 @@ public sealed interface AppError
   String message();
 
   ErrorInfo details();
-
-  @JsonInclude(Include.NON_NULL)
-  public record ErrorResponse(String message, List<ErrorInfo> errors, OffsetDateTime timestamp) {
-    public ErrorResponse {
-      Objects.requireNonNull(message, "message cannot be null");
-    }
-
-    public static ErrorResponse fromMessage(String message) {
-      return ErrorResponse.of(message, null);
-    }
-
-    public static ErrorResponse fromError(AppError error) {
-      return ErrorResponse.of(error.message(), List.of(error.details()));
-    }
-
-    public static ErrorResponse fromError(String message, AppError error) {
-      return ErrorResponse.of(message, List.of(error.details()));
-    }
-
-    public static ErrorResponse fromErrors(String message, List<? extends AppError> errors) {
-      return ErrorResponse.of(message, errors.stream().map(AppError::details).toList());
-    }
-
-    public static ErrorResponse of(String message, List<ErrorInfo> errors) {
-      return new ErrorResponse(message, errors, OffsetDateTime.now(ZoneOffset.UTC));
-    }
-  }
 
   @JsonInclude(Include.NON_NULL)
   record ErrorInfo(String field, String message, String code) {
